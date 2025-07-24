@@ -12,7 +12,7 @@ using Photon.Realtime;
 using System.Collections;
 
 
-[BepInPlugin("marttico.fogspeed", "FogSpeed", "0.1.2")]
+[BepInPlugin("marttico.fogspeed", "FogSpeed", "0.1.3")]
 public class FogSpeedPlugin : BaseUnityPlugin
 {
     internal static ManualLogSource Log;

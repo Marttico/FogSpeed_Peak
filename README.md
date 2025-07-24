@@ -2,6 +2,7 @@
 
 This mod does what it says on the tin! You can speed up or slow down the fog speed.
 
+[Thunderstore page](https://thunderstore.io/c/peak/p/TeamCo/FogSpeed/)
 
 Default keybinds:
 

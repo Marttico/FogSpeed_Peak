@@ -8,7 +8,7 @@ repository = "https://thunderstore.io"
 namespace = "Marttico"
 name = "FogSpeed"
 description = "Control fog speed."
-websiteUrl = ""
+websiteUrl = "https://github.com/Marttico/FogSpeed_Peak"
 containsNsfwContent = false
 
 [package.dependencies]
