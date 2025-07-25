@@ -12,7 +12,7 @@ using Photon.Realtime;
 using System.Collections;
 using UnityEngine.SceneManagement;
 
-[BepInPlugin("marttico.fogspeed", "FogSpeed", "0.1.3")]
+[BepInPlugin("marttico.fogspeed", "FogSpeed", "0.2.0")]
 public class FogSpeedPlugin : BaseUnityPlugin
 {
     internal static ManualLogSource Log;
@@ -25,10 +25,10 @@ public class FogSpeedPlugin : BaseUnityPlugin
     private ConfigEntry<KeyCode> pauseFogKey;
     private ConfigEntry<KeyCode> decreaseFogSpdKey;
     private ConfigEntry<KeyCode> negateFogSpdKey;
-    private static ConfigEntry<KeyCode> advanceFogKey;
+    private ConfigEntry<KeyCode> advanceFogKey;
 
-    private static float fogSpeed = 0.3f;
-    private static bool isPaused = false;
+    private float fogSpeed = 0.3f;
+    private bool isPaused = false;
     
     private PhotonView photonView; 
     private FogSpeedSyncHandler syncHandler;
