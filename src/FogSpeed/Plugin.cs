@@ -10,7 +10,7 @@ using System.Linq;
 using Photon.Pun;
 using Photon.Realtime;
 using System.Collections;
-
+using UnityEngine.SceneManagement;
 
 [BepInPlugin("marttico.fogspeed", "FogSpeed", "0.1.3")]
 public class FogSpeedPlugin : BaseUnityPlugin
@@ -29,113 +29,158 @@ public class FogSpeedPlugin : BaseUnityPlugin
 
     private static float fogSpeed = 0.3f;
     private static bool isPaused = false;
-
-    public static bool fogChangeQueued = false;
     
-    private PhotonView photonView;
+    private PhotonView photonView; 
+    private FogSpeedSyncHandler syncHandler;
+
+    private float retrycounter;
+
+    public static OrbFogHandler? orbfoghandler;
+
+    private void registerPhotonView()
+    {
+        photonView = orbfoghandler.GetComponent<PhotonView>();
+        if (photonView == null)
+        {
+            Log.LogError("PhotonView is null on OrbFogHandler!");
+        }
+        else
+        {
+            syncHandler = orbfoghandler.gameObject.AddComponent<FogSpeedSyncHandler>();
+            syncHandler.fogHandler = orbfoghandler;
+
+            PhotonNetwork.AddCallbackTarget(this);
+        }
+    }
 
     private void Awake()
     {
         Log = Logger;
-        Log.LogInfo("FogSpeedPlugin Awake");
-
-        photonView = GetComponent<PhotonView>();
 
         // Load Config
-        defaultFogSpeed = Config.Bind("General","DefaultFogSpeed", 0.3f,"Default speed multiplier for the fog effect.");
-        advanceFogKey = Config.Bind("General","AdvanceFogKey",KeyCode.I,"Default key to advance fog.");
-        decreaseFogSpdKey = Config.Bind("General", "DecreaseFogSpeedKey",KeyCode.J,"Default key to decrease fog speed multiplier.");
-        pauseFogKey = Config.Bind("General","PauseFogKey",KeyCode.K,"Default key to pause or resume fog progression.");
-        increaseFogSpdKey = Config.Bind("General","IncreaseFogSpeedKey",KeyCode.L,"Default key to increase fog speed multiplier.");
-        negateFogSpdKey = Config.Bind("General","NegateFogSpeedKey",KeyCode.O,"Default key to negate fog speed.");
-        hotkeysEnabled = Config.Bind("General","EnableHotkeys",true,"Check this if you want to enable hotkeys");
-        
+        defaultFogSpeed = Config.Bind("General", "DefaultFogSpeed", 0.3f, "Default speed multiplier for the fog effect.");
+        advanceFogKey = Config.Bind("General", "AdvanceFogKey", KeyCode.I, "Default key to advance fog.");
+        decreaseFogSpdKey = Config.Bind("General", "DecreaseFogSpeedKey", KeyCode.J, "Default key to decrease fog speed multiplier.");
+        pauseFogKey = Config.Bind("General", "PauseFogKey", KeyCode.K, "Default key to pause or resume fog progression.");
+        increaseFogSpdKey = Config.Bind("General", "IncreaseFogSpeedKey", KeyCode.L, "Default key to increase fog speed multiplier.");
+        negateFogSpdKey = Config.Bind("General", "NegateFogSpeedKey", KeyCode.O, "Default key to negate fog speed.");
+        hotkeysEnabled = Config.Bind("General", "EnableHotkeys", true, "Check this if you want to enable hotkeys");
 
         fogSpeed = defaultFogSpeed.Value;
 
         // Patch all methods.
         var harmony = new Harmony("marttico.fogspeed");
         harmony.PatchAll();
-        
-        Log.LogInfo("FogSpeedPlugin Loaded");
+
+        Log.LogInfo("FogSpeedPlugin Loaded.");
     }
 
-    private void Update(){
-        if (Input.GetKeyDown(decreaseFogSpdKey.Value) && hotkeysEnabled.Value){
-            FogSpeedPlugin.fogSpeed /= 1.5f;
-            FogSpeedPlugin.Log.LogInfo($"Fog speed decreased to {fogSpeed}");
-            fogChangeQueued = true;
-        }
+    private void sendFogSpeed()
+    {
+        fogSpeed = Mathf.Max(-50f, fogSpeed);
+        fogSpeed = Mathf.Min(50f, fogSpeed);
 
-        if (Input.GetKeyDown(pauseFogKey.Value) && hotkeysEnabled.Value){
-            FogSpeedPlugin.isPaused = !FogSpeedPlugin.isPaused;
-            FogSpeedPlugin.Log.LogInfo("Fog paused or resumed");
-            fogChangeQueued = true;
+        if (isPaused)
+        {
+            photonView.RPC("RPCA_SyncFogSpeed", RpcTarget.All, 0f);
         }
-
-        if (Input.GetKeyDown(increaseFogSpdKey.Value) && hotkeysEnabled.Value){
-            FogSpeedPlugin.fogSpeed *= 1.5f;
-            FogSpeedPlugin.Log.LogInfo($"Fog speed increased to {fogSpeed}");
-            fogChangeQueued = true;
+        else
+        {
+            photonView.RPC("RPCA_SyncFogSpeed", RpcTarget.All, fogSpeed);
         }
-
-        if (Input.GetKeyDown(negateFogSpdKey.Value) && hotkeysEnabled.Value){
-            FogSpeedPlugin.fogSpeed *= -1f;
-            FogSpeedPlugin.Log.LogInfo($"Fog speed inverted to {fogSpeed}");
-            fogChangeQueued = true;
-        }
-
-        FogSpeedPlugin.fogSpeed = Mathf.Max(-50f,FogSpeedPlugin.fogSpeed);
-        FogSpeedPlugin.fogSpeed = Mathf.Min(50f,FogSpeedPlugin.fogSpeed);
     }
-    
-    [HarmonyPatch(typeof(OrbFogHandler), "Move")]
-    static class OrbFogSpeedHandler_Patch {
-        static void Prefix(OrbFogHandler __instance){
-            if(FogSpeedPlugin.isPaused){
-                __instance.speed = 0;
-            }else{
-                __instance.speed = FogSpeedPlugin.fogSpeed;
+
+    private void Update()
+    {
+        if (PhotonNetwork.IsMasterClient)
+        {
+            if (Input.GetKeyDown(decreaseFogSpdKey.Value) && hotkeysEnabled.Value)
+            {
+                fogSpeed /= 1.5f;
+                Log.LogInfo($"Fog speed decreased to {fogSpeed}");
+                sendFogSpeed();
+            }
+
+            if (Input.GetKeyDown(pauseFogKey.Value) && hotkeysEnabled.Value)
+            {
+                isPaused = !isPaused;
+                Log.LogInfo("Fog paused or resumed");
+                sendFogSpeed();
+            }
+
+            if (Input.GetKeyDown(increaseFogSpdKey.Value) && hotkeysEnabled.Value)
+            {
+                fogSpeed *= 1.5f;
+                Log.LogInfo($"Fog speed increased to {fogSpeed}");
+                sendFogSpeed();
+            }
+
+            if (Input.GetKeyDown(negateFogSpdKey.Value) && hotkeysEnabled.Value)
+            {
+                fogSpeed *= -1f;
+                Log.LogInfo($"Fog speed inverted to {fogSpeed}");
+                sendFogSpeed();
+            }
+
+            if (Input.GetKeyDown(advanceFogKey.Value) && !orbfoghandler.isMoving && PhotonNetwork.IsMasterClient && hotkeysEnabled.Value)
+            {
+                photonView.RPC("StartMovingRPC", RpcTarget.All);
+                Log.LogInfo("Fog has been advanced");
+                sendFogSpeed();
+            }
+        }
+
+        retrycounter += Time.deltaTime;
+        if (orbfoghandler == null && retrycounter > 5f)
+        {
+            retrycounter = 0;
+            orbfoghandler = Object.FindAnyObjectByType<OrbFogHandler>();
+            if (orbfoghandler != null)
+            {
+                registerPhotonView();
+            }
+            else
+            {
+                Log.LogInfo("OrbFogHandler not found, retrying in 5 seconds!");
             }
         }
     }
-    
-    [HarmonyPatch(typeof(OrbFogHandler), "Update")]
-    static class OrbFogHandlerStart_Patch {
-        static void Prefix(OrbFogHandler __instance){
-            if (Input.GetKeyDown(advanceFogKey.Value) && !__instance.isMoving && PhotonNetwork.IsMasterClient && FogSpeedPlugin.hotkeysEnabled.Value){
-                __instance.photonView.RPC("StartMovingRPC", RpcTarget.All);
-                FogSpeedPlugin.Log.LogInfo("Fog has been advanced");
-            }
-        }
-    }
 
-    [HarmonyPatch(typeof(OrbFogHandler), "Sync")]
-    static class OrbFogHandlerSync_Patch {
-        static void Prefix(OrbFogHandler __instance){
-            if(FogSpeedPlugin.fogChangeQueued){
-                FogSpeedPlugin.Log.LogInfo("RPCA SYNCING");
-                FogSpeedPlugin.fogChangeQueued = false;
-                __instance.photonView.RPC("RPCA_SyncFog", RpcTarget.Others, __instance.currentSize, __instance.isMoving);
-            }
-        }
-    }
 
     [HarmonyPatch(typeof(VersionString), "Update")]
     static class VersionStringPatch{
         static void Postfix(VersionString __instance){
-            if (PhotonNetwork.InRoom && UnityEngine.Object.FindObjectOfType<OrbFogHandler>())
+            if (PhotonNetwork.InRoom && FogSpeedPlugin.orbfoghandler != null)
 			{
+                float speed = FogSpeedPlugin.orbfoghandler.speed;
                 string text;
-                if (FogSpeedPlugin.isPaused){
+                if (speed == 0){
                     text = $"\nFog speed paused";
                 }else{
-                    text = $"\nFog speed: {FogSpeedPlugin.fogSpeed:F2}";
+                    text = $"\nFog speed: {speed:F2}";
                 }
                 TextMeshProUGUI text2 = __instance.m_text;
                 ((TMP_Text)text2).text = ((TMP_Text)text2).text + text;
             }
         }
     }
-    
+}
+
+public class FogSpeedSyncHandler : MonoBehaviourPun
+{
+    public OrbFogHandler fogHandler;
+
+    [PunRPC]
+    public void RPCA_SyncFogSpeed(float spd)
+    {
+        if (fogHandler != null)
+        {
+            FogSpeedPlugin.Log.LogInfo($"[RPC] Synced fog speed: {spd}");
+            fogHandler.speed = spd;
+        }
+        else
+        {
+            FogSpeedPlugin.Log.LogWarning("FogHandler was null during RPC.");
+        }
+    }
 }
