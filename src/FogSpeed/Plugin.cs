@@ -12,7 +12,7 @@ using Photon.Realtime;
 using System.Collections;
 using UnityEngine.SceneManagement;
 
-[BepInPlugin("marttico.fogspeed", "FogSpeed", "0.2.0")]
+[BepInPlugin("marttico.fogspeed", "FogSpeed", "0.2.1")]
 public class FogSpeedPlugin : BaseUnityPlugin
 {
     internal static ManualLogSource Log;
@@ -26,6 +26,7 @@ public class FogSpeedPlugin : BaseUnityPlugin
     private ConfigEntry<KeyCode> decreaseFogSpdKey;
     private ConfigEntry<KeyCode> negateFogSpdKey;
     private ConfigEntry<KeyCode> advanceFogKey;
+    private ConfigEntry<KeyCode> resetFogSpdKey;
 
     private float fogSpeed = 0.3f;
     private bool isPaused = false;
@@ -64,6 +65,7 @@ public class FogSpeedPlugin : BaseUnityPlugin
         pauseFogKey = Config.Bind("General", "PauseFogKey", KeyCode.K, "Default key to pause or resume fog progression.");
         increaseFogSpdKey = Config.Bind("General", "IncreaseFogSpeedKey", KeyCode.L, "Default key to increase fog speed multiplier.");
         negateFogSpdKey = Config.Bind("General", "NegateFogSpeedKey", KeyCode.O, "Default key to negate fog speed.");
+        resetFogSpdKey = Config.Bind("General", "ResetFogSpeedKey", KeyCode.U, "Reset fog speed.");
         hotkeysEnabled = Config.Bind("General", "EnableHotkeys", true, "Check this if you want to enable hotkeys");
 
         fogSpeed = defaultFogSpeed.Value;
@@ -119,6 +121,13 @@ public class FogSpeedPlugin : BaseUnityPlugin
             {
                 fogSpeed *= -1f;
                 Log.LogInfo($"Fog speed inverted to {fogSpeed}");
+                sendFogSpeed();
+            }
+
+            if (Input.GetKeyDown(resetFogSpdKey.Value) && hotkeysEnabled.Value)
+            {
+                fogSpeed = 0.3f;
+                Log.LogInfo($"Fog speed reset to {fogSpeed}");
                 sendFogSpeed();
             }
 

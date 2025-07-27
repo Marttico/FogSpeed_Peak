@@ -8,11 +8,12 @@ NOTE: Due to fog speed not being a parameter that gets synced between server and
 
 Default keybinds:
 
-- `J` Slow down Fog
+- `J` Slow down fog
 - `K` Pause fog
-- `L` Speed up Fog
+- `L` Speed up fog
 - `I` Advance fog
 - `O` Change fog direction
+- `U` Reset fog speed to default
 
 Config parameters:
 

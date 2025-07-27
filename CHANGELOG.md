@@ -1,4 +1,3 @@
 # Changelog
 
-- Updated readme
-    - Added a special thanks to Pedguin for the idea!
+- Added reset fog speed key. (So you can reset it EXACTLY to what it was before!)
